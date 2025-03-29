@@ -1,5 +1,6 @@
 #include "MelodyPlayer.h"
 #include <cmath>
+#include <sstream>
 
 MelodyPlayer::MelodyPlayer(const std::vector<std::string>& melody, int bpm)
         : m_melody(melody), m_tempo(bpm)
@@ -24,28 +25,34 @@ MelodyPlayer::MelodyPlayer(const std::vector<std::string>& melody, int bpm)
 
 void MelodyPlayer::Play()
 {
-    for (const auto& note : m_melody)
+    for (const auto& line : m_melody)
     {
-        if (note == "-")
+        if (line == "-")
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(60000 / m_tempo));
             continue;
         }
 
-        if (!IsValidNote(note))
+        std::vector<float> frequencies;
+        std::stringstream ss(line);
+        std::string note;
+        while (std::getline(ss, note, '|'))
         {
-            std::cerr << "Ошибка: Некорректная нота \"" << note << "\". Пропуск." << std::endl;
-            continue;
+            if (!IsValidNote(note))
+            {
+                std::cerr << "Ошибка: Некорректная нота \"" << note << "\". Пропуск." << std::endl;
+                continue;
+            }
+            frequencies.push_back(NoteToFrequency(note));
         }
 
-        float frequency = NoteToFrequency(note);
-        GenerateWaveform(frequency, 60.0f / m_tempo);
+        GenerateWaveform(frequencies, 60.0f / m_tempo);
         m_sound.play();
         std::this_thread::sleep_for(std::chrono::milliseconds(60000 / m_tempo));
     }
 }
 
-void MelodyPlayer::GenerateWaveform(float frequency, float duration)
+void MelodyPlayer::GenerateWaveform(const std::vector<float>& frequencies, float duration)
 {
     constexpr int sampleRate = 44100;
     int sampleCount = static_cast<int>(sampleRate * duration);
@@ -53,7 +60,12 @@ void MelodyPlayer::GenerateWaveform(float frequency, float duration)
 
     for (int i = 0; i < sampleCount; ++i)
     {
-        float amplitude = 30000 * sin(2 * 3.14159f * frequency * i / sampleRate);
+        float amplitude = 0;
+        for (float freq : frequencies)
+        {
+            amplitude += 30000 * sin(2 * 3.14159f * freq * i / sampleRate);
+        }
+        amplitude /= frequencies.size();
         samples[i] = static_cast<sf::Int16>(amplitude);
     }
 

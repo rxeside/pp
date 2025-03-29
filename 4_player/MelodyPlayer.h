@@ -22,7 +22,7 @@ private:
     sf::SoundBuffer m_buffer;
     sf::Sound m_sound;
 
-    void GenerateWaveform(float frequency, float duration);
+    void GenerateWaveform(const std::vector<float>& frequencies, float duration);
     float NoteToFrequency(const std::string& note);
     bool IsValidNote(const std::string& note);
 };
